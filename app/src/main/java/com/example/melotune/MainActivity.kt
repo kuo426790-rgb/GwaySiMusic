@@ -37,6 +37,9 @@ class MainActivity : Activity() {
     private lateinit var root: LinearLayout
     private lateinit var screenContainer: FrameLayout
     private lateinit var bottomNavigation: LinearLayout
+    private lateinit var miniPlayerBar: LinearLayout
+    private lateinit var miniSongTitle: TextView
+    private lateinit var miniPlayButton: Button
     private var currentScreen = "Library"
     private lateinit var libraryScreen: LinearLayout
     private lateinit var playerScreen: LinearLayout
@@ -63,6 +66,7 @@ class MainActivity : Activity() {
                     playbackTime.text = formatTime(active.currentPosition)
                     playbackDuration.text = formatTime(active.duration)
                     playPauseButton.text = if (active.isPlaying) "Ⅱ" else "▶"
+                    if (::miniPlayButton.isInitialized) miniPlayButton.text = if (active.isPlaying) "Ⅱ" else "▶"
                 } catch (_: Exception) { }
             }
             progressHandler.postDelayed(this, 500)
@@ -272,7 +276,7 @@ class MainActivity : Activity() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(12), dp(16), dp(8))
-            setBackgroundColor(0xFF0B0A10.toInt())
+            setBackgroundColor(0xFF09080F.toInt())
         }
 
         screenContainer = FrameLayout(this)
@@ -311,8 +315,8 @@ class MainActivity : Activity() {
         libraryScreen.addView(libraryScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val title = TextView(this).apply {
-            text = "GwaySi Music  ♫"
-            textSize = 28f
+            text = "GwaySi"
+            textSize = 36f
             setTextColor(0xFFD0B5FF.toInt())
             gravity = Gravity.CENTER_VERTICAL
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -321,7 +325,7 @@ class MainActivity : Activity() {
         libraryContent.addView(title)
 
         val subtitle = TextView(this).apply {
-            text = "YOUR SOUND. YOUR MOOD."
+            text = "YOUR MUSIC. YOUR MOOD. YOUR SOUND."
             textSize = 10f
             letterSpacing = 0.16f
             setTextColor(0xFF9C91B5.toInt())
@@ -330,7 +334,7 @@ class MainActivity : Activity() {
         libraryContent.addView(subtitle)
 
         val moodTitle = TextView(this).apply {
-            text = "PICK YOUR MOOD  ✨"
+            text = "Find your mood  ✨"
             textSize = 15f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(0xFFD0B5FF.toInt())
@@ -373,15 +377,15 @@ class MainActivity : Activity() {
         libraryContent.addView(search, searchParams)
 
         val yt = Button(this).apply {
-            text = "Search on YouTube  ↗"
-            textSize = 14f
+            text = "Find music on YouTube  ↗"
+            textSize = 13f
             setOnClickListener { openYouTubeSearch() }
         }
         stylePremiumButton(yt, false, false)
         libraryContent.addView(yt, matchWrap())
 
         val listTitle = TextView(this).apply {
-            text = "YOUR MUSIC"
+            text = "Your library"
             textSize = 17f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(0xFFD0B5FF.toInt())
@@ -411,7 +415,7 @@ class MainActivity : Activity() {
         playerScreen.addView(playerScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val playerHeading = TextView(this).apply {
-            text = "NOW PLAYING"
+            text = "NOW PLAYING  ·  GWAYSI"
             textSize = 12f
             letterSpacing = 0.16f
             setTextColor(0xFFA994D8.toInt())
@@ -507,14 +511,8 @@ class MainActivity : Activity() {
         val openEq = Button(this).apply {
             text = "♫  Open Equalizer"
             setOnClickListener {
-                if (eqArea.visibility == View.VISIBLE) {
-                    eqArea.visibility = View.GONE
-                    text = "♫  Open Equalizer"
-                } else {
-                    eqArea.visibility = View.VISIBLE
-                    text = "♫  Hide Equalizer"
-                    buildEqualizerUi()
-                }
+                showScreen("Equalizer")
+                buildEqualizerUi()
             }
         }
         stylePremiumButton(openEq, true, false)
@@ -532,7 +530,7 @@ class MainActivity : Activity() {
         equalizerScreen.addView(eqScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val eqTitle = TextView(this).apply {
-            text = "EQUALIZER  ♪"
+            text = "Sound Studio"
             textSize = 23f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(0xFFD0B5FF.toInt())
@@ -554,7 +552,7 @@ class MainActivity : Activity() {
             background = roundedBackground(0xFF17141F.toInt(), 16)
             visibility = View.GONE
         }
-        playerContent.addView(eqArea, matchWrap())
+        eqContent.addView(eqArea, matchWrap())
 
         // BOTTOM NAVIGATION
         bottomNavigation = LinearLayout(this).apply {
@@ -564,8 +562,9 @@ class MainActivity : Activity() {
             background = roundedBackground(0xFF17141F.toInt(), 20)
         }
         val navItems = listOf(
-            "Library" to "♫\nLibrary",
-            "Player" to "▶\nPlayer"
+            "Library" to "⌂\nLibrary",
+            "Player" to "▶\nPlayer",
+            "Equalizer" to "≋\nSound"
         )
         navItems.forEach { (screen, label) ->
             val button = Button(this).apply {
@@ -579,6 +578,50 @@ class MainActivity : Activity() {
             params.marginEnd = dp(4)
             bottomNavigation.addView(button, params)
         }
+        // Persistent compact mini-player, shown above the bottom navigation.
+        miniPlayerBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(7), dp(8), dp(7))
+            background = roundedBackground(0xFF211B2D.toInt(), 18)
+            setOnClickListener { if (currentSong != null) showScreen("Player") }
+        }
+        val miniArt = TextView(this).apply {
+            text = "♫"
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTextColor(0xFFE0CEFF.toInt())
+            background = roundedBackground(0xFF3A2B50.toInt(), 12)
+        }
+        miniPlayerBar.addView(miniArt, LinearLayout.LayoutParams(dp(42), dp(42)).apply { marginEnd = dp(10) })
+        val miniTextColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL }
+        miniSongTitle = TextView(this).apply {
+            text = "Nothing playing yet"
+            textSize = 13f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(0xFFF7F1FF.toInt())
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val miniArtist = TextView(this).apply {
+            text = "Tap a song to start listening"
+            textSize = 10f
+            setTextColor(0xFFB7A9C9.toInt())
+            maxLines = 1
+        }
+        miniTextColumn.addView(miniSongTitle)
+        miniTextColumn.addView(miniArtist)
+        miniPlayerBar.addView(miniTextColumn, LinearLayout.LayoutParams(0, -2, 1f))
+        miniPlayButton = Button(this).apply {
+            text = "▶"
+            textSize = 18f
+            isAllCaps = false
+            setOnClickListener { if (player != null) togglePlayback() else if (songs.isNotEmpty()) playSong(songs.first()) }
+        }
+        stylePremiumButton(miniPlayButton, true, true)
+        miniPlayerBar.addView(miniPlayButton, LinearLayout.LayoutParams(dp(48), dp(44)))
+        val miniParams = LinearLayout.LayoutParams(-1, dp(60)).apply { bottomMargin = dp(8) }
+        root.addView(miniPlayerBar, miniParams)
         root.addView(bottomNavigation, LinearLayout.LayoutParams(-1, dp(64)))
         setContentView(root)
         progressHandler.post(progressUpdater)
@@ -852,6 +895,7 @@ class MainActivity : Activity() {
             val eq = equalizer!!
             bandRange = eq.bandLevelRange
             nowPlaying.text = "${song.title}\n${song.artist}"
+            if (::miniSongTitle.isInitialized) miniSongTitle.text = song.title
             playbackSeek.max = player!!.duration.coerceAtLeast(1)
             playbackSeek.progress = 0
             playbackTime.text = "0:00"
@@ -882,6 +926,47 @@ class MainActivity : Activity() {
         eqArea.removeAllViews()
         val eq = equalizer ?: return
         val count = minOf(eq.numberOfBands.toInt(), bandNames.size)
+        val presetTitle = TextView(this).apply {
+            text = "SOUND PRESETS"
+            textSize = 11f
+            letterSpacing = 0.12f
+            setTextColor(0xFFAAA0C2.toInt())
+            setPadding(dp(2), dp(4), dp(2), dp(8))
+        }
+        eqArea.addView(presetTitle)
+        val presetScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        val presetRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val presets = linkedMapOf(
+            "Auto" to intArrayOf(0, 0, 0, 0, 0),
+            "Normal" to intArrayOf(0, 0, 0, 0, 0),
+            "Pop" to intArrayOf(-100, 250, 500, 200, -100),
+            "Jazz" to intArrayOf(300, 150, -100, 200, 350),
+            "Classical" to intArrayOf(350, 200, 0, 250, 350),
+            "Rock" to intArrayOf(450, 250, -100, 300, 450),
+            "Bass" to intArrayOf(650, 450, 100, -100, -150)
+        )
+        presets.forEach { (name, levels) ->
+            val preset = Button(this).apply {
+                text = name
+                setOnClickListener {
+                    try {
+                        val active = equalizer ?: return@setOnClickListener
+                        for (i in 0 until minOf(active.numberOfBands.toInt(), levels.size)) {
+                            val value = (levels[i] * 1).coerceIn(bandRange[0].toInt(), bandRange[1].toInt())
+                            active.setBandLevel(i.toShort(), value.toShort())
+                        }
+                        saveCurrentEq()
+                        buildEqualizerUi()
+                    } catch (_: Exception) {
+                        Toast.makeText(this@MainActivity, "This preset isn't supported by this device", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            stylePremiumButton(preset, name == "Normal", true)
+            presetRow.addView(preset, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)).apply { marginEnd = dp(7) })
+        }
+        presetScroll.addView(presetRow)
+        eqArea.addView(presetScroll, matchWrap())
         for (i in 0 until count) {
             val band = i.toShort()
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
